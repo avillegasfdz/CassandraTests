@@ -1,0 +1,31 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.2.71'
+}
+
+group 'shapelets.io'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+
+    // https://mvnrepository.com/artifact/com.datastax.cassandra/cassandra-driver-core
+    compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.6.0'
+    compile group: 'com.datastax.cassandra', name: 'cassandra-driver-mapping', version: '3.6.0'
+    compile group: 'com.datastax.cassandra', name: 'cassandra-driver-extras', version: '3.6.0'
+    compile group: 'org.apache.cassandra', name: 'cassandra-all', version: '3.6'
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
