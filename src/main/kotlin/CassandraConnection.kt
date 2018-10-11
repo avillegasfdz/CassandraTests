@@ -1,7 +1,9 @@
 import com.datastax.driver.core.*
 import com.datastax.driver.core.utils.Bytes
+import org.apache.cassandra.utils.ByteBufferUtil
 import java.io.File
 import org.apache.cassandra.utils.UUIDGen
+import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.util.*
 import kotlin.collections.ArrayList
@@ -107,22 +109,45 @@ class CassandraConnection(node: String, port: Int)
     fun insertDataEvenlyExplicitSymbolic(){
 
         val prepared = session.prepare("""
-            |                   INSERT INTO timeseries.e_e_u_sym(timeseries_name, column_name, time,values)
+            |                   INSERT INTO timeseries.e_e_sym(timeseries_name, column_name, time,value)
             |                   VALUES (?, ?, ?, ?);
                                 """.trimMargin())
-        val values = arrayListOf<String>()
+
         val now = System.currentTimeMillis()
 
         for (i in 1..10) {
-            values.add(i.toString())
+
             session.execute(BoundStatement(prepared).bind( "TimeSeries0",
                     "temperature",
                     Timestamp(now+i.toLong()*1000),
-                    values))
+                    ByteBufferUtil.bytes("Hello world!")))
             session.execute(BoundStatement(prepared).bind("TimeSeries0",
                     "humidity",
                     Timestamp(now+i.toLong()*1000),
-                    values))
+                    ByteBufferUtil.bytes("Hello world!")))
+        }
+    }
+
+
+    fun insertDataEvenlyExplicitNumeric(){
+
+        val prepared = session.prepare("""
+            |                   INSERT INTO timeseries.e_e_num(timeseries_name, column_name, time,value)
+            |                   VALUES (?, ?, ?, ?);
+                                """.trimMargin())
+
+        val now = System.currentTimeMillis()
+
+        for (i in 1..10) {
+
+            session.execute(BoundStatement(prepared).bind( "TimeSeries0",
+                    "temperature",
+                    Timestamp(now+i.toLong()*1000),
+                    i.toDouble()))
+            session.execute(BoundStatement(prepared).bind("TimeSeries0",
+                    "humidity",
+                    Timestamp(now+i.toLong()*1000),
+                    i.toDouble() + 20.0))
 
         }
     }
@@ -183,7 +208,7 @@ class CassandraConnection(node: String, port: Int)
 //        val typeToken = TypeToken.of()
 
         rSetValues.forEach {
-            columnValues.add(it.getList("values", java.lang.Float::class.java))
+            columnValues.add(it.getList(0, java.lang.Float::class.java))
         }
 
         columnValues!!.forEach() { println(it.toString()) }
@@ -196,7 +221,41 @@ class CassandraConnection(node: String, port: Int)
 //        }
 //        values["ts"] = columnTime
     }
+    fun selectSymbolic(keyspaceName: String, tableName: String)
+    {
 
+
+        val preparedValues = session.prepare("""select value from timeseries.e_e_sym
+               where timeseries_name=? and column_name=?
+               order by column_name asc, time asc;""".trimMargin())
+        val preparedArgs = arrayListOf<Any>()
+        preparedArgs.add("TimeSeries0")
+        preparedArgs.add("temperature")
+        val bindingValues = BoundStatement(preparedValues).bind()
+        for (i in 0 until preparedArgs.size) {
+            bindingValues.set(i, preparedArgs[i], preparedArgs[i].javaClass)
+        }
+        val rSetValues = session.execute(bindingValues)
+
+        val columnValues = arrayListOf<Any>()
+
+
+//        val typeToken = TypeToken.of()
+
+        rSetValues.forEach {
+            columnValues.add(it.getBytes(0))
+        }
+
+        columnValues!!.forEach() { println(ByteBufferUtil.string(it as ByteBuffer)) }
+
+//        //Extract Value
+//        val rSetSensor = session.execute("select sensor, value from timeseries.raw_data_evenly_explicit where sensor='temperature' order by ts asc;")
+//        val columnSensor = arrayListOf<Any>()
+//        rSetSensor.forEach {
+//            columnSensor.add(it.getList("value", Float.javaClass))
+//        }
+//        values["ts"] = columnTime
+    }
     fun readData(keyspaceName: String, tableName: String)
     {
         val queryString = "SELECT * FROM ${keyspaceName}.${tableName}"
