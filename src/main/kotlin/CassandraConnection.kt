@@ -1,6 +1,5 @@
 import com.datastax.driver.core.*
 import com.datastax.driver.core.utils.Bytes
-import org.apache.cassandra.db.marshal.TimeUUIDType
 import java.io.File
 import org.apache.cassandra.utils.UUIDGen
 import java.sql.Timestamp
@@ -105,27 +104,97 @@ class CassandraConnection(node: String, port: Int)
         }
     }
 
+    fun insertDataEvenlyExplicitSymbolic(){
+
+        val prepared = session.prepare("""
+            |                   INSERT INTO timeseries.e_e_u_sym(timeseries_name, column_name, time,values)
+            |                   VALUES (?, ?, ?, ?);
+                                """.trimMargin())
+        val values = arrayListOf<String>()
+        val now = System.currentTimeMillis()
+
+        for (i in 1..10) {
+            values.add(i.toString())
+            session.execute(BoundStatement(prepared).bind( "TimeSeries0",
+                    "temperature",
+                    Timestamp(now+i.toLong()*1000),
+                    values))
+            session.execute(BoundStatement(prepared).bind("TimeSeries0",
+                    "humidity",
+                    Timestamp(now+i.toLong()*1000),
+                    values))
+
+        }
+    }
+
     fun selectAll(keyspaceName: String, tableName: String)
     {
 
-        val values = mutableMapOf<String, ArrayList<Any>>()
+        val values = mutableMapOf<String, ArrayList<Date>>()
         //Extact Time
-        val rSetTime = session.execute("""select time from timeseries.e_e_u
-               where timeseries_name='TimeSeries0' and column_name='temperature'
+        val preparedTime = session.prepare("""select time from timeseries.e_e_u
+               where timeseries_name=? and column_name=?
                order by column_name asc, time asc;""".trimMargin())
-        val columnTime = arrayListOf<Any>()
-        rSetTime.forEach {
-            columnTime.add(UUIDGen.microsTimestamp(it.getUUID("ts")))
+        val preparedArgs = arrayListOf<Any>()
+        preparedArgs.add("TimeSeries0")
+        preparedArgs.add("temperature")
+        val bindingTime = BoundStatement(preparedTime).bind()
+        for (i in 0 until preparedArgs.size) {
+            bindingTime.set(i, preparedArgs[i], preparedArgs[i].javaClass)
         }
-        values["ts"] = columnTime
+        val rSetTime = session.execute(bindingTime)
 
-        //Extract Value
-        val rSetSensor = session.execute("select sensor, value from timeseries.raw_data_evenly_explicit where sensor='temperature' order by ts asc;")
-        val columnSensor = arrayListOf<Any>()
-        rSetSensor.forEach {
-            columnSensor.add(it.getList("value", Float.javaClass))
+        val columnTime = arrayListOf<Date>()
+        rSetTime.forEach {
+            columnTime.add(it.getTimestamp(0))
         }
-        values["ts"] = columnTime
+        values["time"] = columnTime
+
+        columnTime!!.forEach() { println(it.toString()) }
+
+//        //Extract Value
+//        val rSetSensor = session.execute("select sensor, value from timeseries.raw_data_evenly_explicit where sensor='temperature' order by ts asc;")
+//        val columnSensor = arrayListOf<Any>()
+//        rSetSensor.forEach {
+//            columnSensor.add(it.getList("value", Float.javaClass))
+//        }
+//        values["ts"] = columnTime
+    }
+
+    fun selectUncertainSymbolic(keyspaceName: String, tableName: String)
+    {
+
+
+        val preparedValues = session.prepare("""select values from timeseries.e_e_u
+               where timeseries_name=? and column_name=?
+               order by column_name asc, time asc;""".trimMargin())
+        val preparedArgs = arrayListOf<Any>()
+        preparedArgs.add("TimeSeries0")
+        preparedArgs.add("temperature")
+        val bindingValues = BoundStatement(preparedValues).bind()
+        for (i in 0 until preparedArgs.size) {
+            bindingValues.set(i, preparedArgs[i], preparedArgs[i].javaClass)
+        }
+        val rSetValues = session.execute(bindingValues)
+
+        val columnValues = arrayListOf<Any>()
+
+
+//        val typeToken = TypeToken.of()
+
+        rSetValues.forEach {
+            columnValues.add(it.getList("values", java.lang.Float::class.java))
+        }
+
+        columnValues!!.forEach() { println(it.toString()) }
+
+//        //Extract Value
+//        val rSetSensor = session.execute("select sensor, value from timeseries.raw_data_evenly_explicit where sensor='temperature' order by ts asc;")
+//        val columnSensor = arrayListOf<Any>()
+//        rSetSensor.forEach {
+//            columnSensor.add(it.getList("value", Float.javaClass))
+//        }
+//        values["ts"] = columnTime
     }
 
     fun readData(keyspaceName: String, tableName: String)
