@@ -46,6 +46,7 @@ fun main(args: Array<String>) {
 //        conn.insertDataEvenlyExplicit()
 //          conn.insertDataEvenlyExplicitSymbolic()
 //            conn.insertDataEvenlyExplicitNumeric()
+        conn.insertDataEvenlyExplicitUncertain()
 //        println("Unevenly")
 //        conn.selectAll("timeseries", "e_e_u")
 //        println("Evenly implicit")

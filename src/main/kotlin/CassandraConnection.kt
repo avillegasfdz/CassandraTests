@@ -83,17 +83,17 @@ class CassandraConnection(node: String, port: Int)
             session.execute(BoundStatement(prepared).bind("temperature", UUIDGen.getTimeUUID(i.toLong()*1000), value*i))
         }
     }
-    fun insertDataEvenlyExplicit(){
+    fun insertDataEvenlyExplicitUncertain(){
 
         val prepared = session.prepare("""
             |                   INSERT INTO timeseries.e_e_u(timeseries_name, column_name, time,values)
             |                   VALUES (?, ?, ?, ?);
                                 """.trimMargin())
-        val values = arrayListOf<Float>()
+        val values = arrayListOf<Double>()
         val now = System.currentTimeMillis()
 
         for (i in 1..10) {
-            values.add(i.toFloat())
+            values.add(i.toDouble())
             session.execute(BoundStatement(prepared).bind( "TimeSeries0",
                                                             "temperature",
                                                             Timestamp(now+i.toLong()*1000),
@@ -177,18 +177,11 @@ class CassandraConnection(node: String, port: Int)
 
         columnTime!!.forEach() { println(it.toString()) }
 
-//        //Extract Value
-//        val rSetSensor = session.execute("select sensor, value from timeseries.raw_data_evenly_explicit where sensor='temperature' order by ts asc;")
-//        val columnSensor = arrayListOf<Any>()
-//        rSetSensor.forEach {
-//            columnSensor.add(it.getList("value", Float.javaClass))
-//        }
-//        values["ts"] = columnTime
+
     }
 
     fun selectUncertainSymbolic(keyspaceName: String, tableName: String)
     {
-
 
         val preparedValues = session.prepare("""select values from timeseries.e_e_u
                where timeseries_name=? and column_name=?
@@ -204,22 +197,13 @@ class CassandraConnection(node: String, port: Int)
 
         val columnValues = arrayListOf<Any>()
 
-
-//        val typeToken = TypeToken.of()
-
         rSetValues.forEach {
             columnValues.add(it.getList(0, java.lang.Float::class.java))
         }
 
         columnValues!!.forEach() { println(it.toString()) }
 
-//        //Extract Value
-//        val rSetSensor = session.execute("select sensor, value from timeseries.raw_data_evenly_explicit where sensor='temperature' order by ts asc;")
-//        val columnSensor = arrayListOf<Any>()
-//        rSetSensor.forEach {
-//            columnSensor.add(it.getList("value", Float.javaClass))
-//        }
-//        values["ts"] = columnTime
+
     }
     fun selectSymbolic(keyspaceName: String, tableName: String)
     {
@@ -248,13 +232,6 @@ class CassandraConnection(node: String, port: Int)
 
         columnValues!!.forEach() { println(ByteBufferUtil.string(it as ByteBuffer)) }
 
-//        //Extract Value
-//        val rSetSensor = session.execute("select sensor, value from timeseries.raw_data_evenly_explicit where sensor='temperature' order by ts asc;")
-//        val columnSensor = arrayListOf<Any>()
-//        rSetSensor.forEach {
-//            columnSensor.add(it.getList("value", Float.javaClass))
-//        }
-//        values["ts"] = columnTime
     }
     fun readData(keyspaceName: String, tableName: String)
     {

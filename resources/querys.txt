@@ -1,0 +1,42 @@
+Evenly, Explicit, Uncertain
+
+CREATE TABLE timeseries.e_e_u (
+	timeseries_name text,
+	column_name text,
+	time timestamp,
+    values list<double>,
+    primary key(timeseries_name, column_name, time)
+) WITH CLUSTERING ORDER BY (column_name ASC,time ASC) 
+  AND compaction = {'class': 'TimeWindowCompactionStrategy', 
+                    'compaction_window_size': 1, 
+                    'compaction_window_unit': 'DAYS'};
+					
+					
+					
+Evenly, Explicit, Symbolic
+					
+CREATE TABLE timeseries.e_e_sym (
+	timeseries_name text,
+	column_name text,
+	time timestamp,
+    value blob,
+    primary key(timeseries_name, column_name, time)
+) WITH CLUSTERING ORDER BY (column_name ASC,time ASC) 
+  AND compaction = {'class': 'TimeWindowCompactionStrategy', 
+                    'compaction_window_size': 1, 
+                    'compaction_window_unit': 'DAYS'};
+					
+					
+Evenly, Explicit, Numeric
+					
+CREATE TABLE timeseries.e_e_num (
+	timeseries_name text,
+	column_name text,
+	time timestamp,
+    value double,
+    primary key(timeseries_name, column_name, time)
+) WITH CLUSTERING ORDER BY (column_name ASC,time ASC) 
+  AND compaction = {'class': 'TimeWindowCompactionStrategy', 
+                    'compaction_window_size': 1, 
+                    'compaction_window_unit': 'DAYS'};
+					
