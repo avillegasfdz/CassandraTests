@@ -7,6 +7,9 @@ import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.util.*
 import kotlin.collections.ArrayList
+import java.io.BufferedReader
+import java.io.FileReader
+import java.text.SimpleDateFormat
 
 
 class CassandraConnection(node: String, port: Int)
@@ -205,6 +208,37 @@ class CassandraConnection(node: String, port: Int)
 
 
     }
+
+    fun insertMilkData()
+    {
+        val prepared = session.prepare("""INSERT INTO timeseries.production (timeseries_name, column_name, time, value)
+            |                               VALUES ('MilkProduction', 'Pounds', ?, ?);""".trimMargin())
+
+        var line: String?
+
+        val fileReader = BufferedReader(FileReader("./resources/monthly-milk-production-pounds-p.csv"))
+
+        // Read CSV header
+        fileReader.readLine()
+
+        // Read the file line by line starting from the second line
+        line = fileReader.readLine()
+        while (line != null) {
+            val tokens = line.split(";")
+            if (tokens.size > 0) {
+                val sdf = SimpleDateFormat("yyyy-MM")
+                val date = sdf.parse(tokens[0].replace("\"",""))
+                val ts = Timestamp(date.time)
+                val v = tokens[1].toDouble()
+                session.execute(BoundStatement(prepared).bind(ts,v))
+            }
+
+            line = fileReader.readLine()
+        }
+
+    }
+
+
     fun selectSymbolic(keyspaceName: String, tableName: String)
     {
 

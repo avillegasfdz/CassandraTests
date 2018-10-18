@@ -46,7 +46,7 @@ fun main(args: Array<String>) {
 //        conn.insertDataEvenlyExplicit()
 //          conn.insertDataEvenlyExplicitSymbolic()
 //            conn.insertDataEvenlyExplicitNumeric()
-        conn.insertDataEvenlyExplicitUncertain()
+//        conn.insertDataEvenlyExplicitUncertain()
 //        println("Unevenly")
 //        conn.selectAll("timeseries", "e_e_u")
 //        println("Evenly implicit")
@@ -54,7 +54,8 @@ fun main(args: Array<String>) {
        // println("Evenly explicit")
         //conn.selectUncertainSymbolic("timeseries", "e_e_u_sym")
         //conn.insertDataEvenlyExplicitSymbolic()
-        conn.selectSymbolic("timeseries", "e_e_sym")
+//        conn.selectSymbolic("timeseries", "e_e_sym")
+        conn.insertMilkData()
     }catch (e: InvalidQueryException)
     {
         println("Can't operate on table")
