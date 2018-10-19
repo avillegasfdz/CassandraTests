@@ -238,17 +238,46 @@ class CassandraConnection(node: String, port: Int)
 
     }
 
-
-    fun selectSymbolic(keyspaceName: String, tableName: String)
+    fun insertTempData()
     {
+        val prepared = session.prepare("""INSERT INTO timeseries.temperatures (timeseries_name, column_name, time, value)
+            |                               VALUES ('Castle', 'Temperature(F)', ?, ?);""".trimMargin())
+
+        var line: String?
+
+        val fileReader = BufferedReader(FileReader("./resources/mean-monthly-air-temperature-deg.csv"))
+
+        // Read CSV header
+        fileReader.readLine()
+
+        // Read the file line by line starting from the second line
+        line = fileReader.readLine()
+        while (line != null) {
+            val tokens = line.split(";")
+            if (tokens.size > 0) {
+                val sdf = SimpleDateFormat("yyyy-MM")
+                val date = sdf.parse(tokens[0].replace("\"",""))
+                val ts = Timestamp(date.time)
+                val v = tokens[1].toDouble()
+                session.execute(BoundStatement(prepared).bind(ts,v))
+            }
+
+            line = fileReader.readLine()
+        }
+
+    }
 
 
-        val preparedValues = session.prepare("""select value from timeseries.e_e_sym
+
+
+    fun selectSymbolic()
+    {
+        val preparedValues = session.prepare("""select value from timeseries.dna
                where timeseries_name=? and column_name=?
                order by column_name asc, time asc;""".trimMargin())
         val preparedArgs = arrayListOf<Any>()
-        preparedArgs.add("TimeSeries0")
-        preparedArgs.add("temperature")
+        preparedArgs.add("Human")
+        preparedArgs.add("Sample")
         val bindingValues = BoundStatement(preparedValues).bind()
         for (i in 0 until preparedArgs.size) {
             bindingValues.set(i, preparedArgs[i], preparedArgs[i].javaClass)
@@ -257,14 +286,11 @@ class CassandraConnection(node: String, port: Int)
 
         val columnValues = arrayListOf<Any>()
 
-
-//        val typeToken = TypeToken.of()
-
         rSetValues.forEach {
-            columnValues.add(it.getBytes(0))
+            columnValues.add(it.getString(0))
         }
 
-        columnValues!!.forEach() { println(ByteBufferUtil.string(it as ByteBuffer)) }
+        columnValues!!.forEach() { println(it) }
 
     }
     fun readData(keyspaceName: String, tableName: String)

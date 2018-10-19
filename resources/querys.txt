@@ -29,7 +29,7 @@ CREATE TABLE timeseries.e_e_sym (
 					
 Evenly, Explicit, Numeric
 					
-CREATE TABLE timeseries.e_e_num (
+CREATE TABLE timeseries.production (
 	timeseries_name text,
 	column_name text,
 	time timestamp,
@@ -97,3 +97,59 @@ VALUES ('TimeSeries0', 'temperature', 8.0, 10.0) ;
 INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
 VALUES ('TimeSeries0', 'temperature', 9.0, 20.0) ;	
 APPLY BATCH ;
+
+Milk production
+
+CREATE TABLE timeseries.production (
+	timeseries_name text,
+	column_name text,
+	time timestamp,
+    value double,
+    primary key(timeseries_name, column_name, time)
+) WITH CLUSTERING ORDER BY (column_name ASC,time ASC) 
+  AND compaction = {'class': 'TimeWindowCompactionStrategy', 
+                    'compaction_window_size': 1, 
+                    'compaction_window_unit': 'DAYS'};
+					
+					
+					
+CREATE TABLE timeseries.dna (
+	timeseries_name text,
+	column_name text,
+	time double,
+    value text,
+    primary key(timeseries_name, column_name, time)
+) WITH CLUSTERING ORDER BY (column_name ASC,time ASC) 
+  AND compaction = {'class': 'TimeWindowCompactionStrategy', 
+                    'compaction_window_size': 1, 
+                    'compaction_window_unit': 'DAYS'};
+					
+
+BEGIN BATCH
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 0.0, 'A') ;
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 1.0, 'C') ;
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 2.0, 'T') ;
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 3.0, 'A') ;
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 4.0, 'A') ;
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 5.0, 'G') ;
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 6.0, 'A') ;
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 7.0, 'C') ;
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 8.0, 'T') ;
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 9.0, 'A') ;
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 10.0, 'A') ;
+INSERT INTO timeseries.dna  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 11.0, 'G') ;
+APPLY BATCH;
+					
+					

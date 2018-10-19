@@ -55,7 +55,9 @@ fun main(args: Array<String>) {
         //conn.selectUncertainSymbolic("timeseries", "e_e_u_sym")
         //conn.insertDataEvenlyExplicitSymbolic()
 //        conn.selectSymbolic("timeseries", "e_e_sym")
-        conn.insertMilkData()
+//        conn.insertMilkData()
+        //conn.selectSymbolic()
+//        conn.insertTempData()
     }catch (e: InvalidQueryException)
     {
         println("Can't operate on table")
