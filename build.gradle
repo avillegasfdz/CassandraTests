@@ -21,6 +21,7 @@ dependencies {
     compile group: 'com.datastax.cassandra', name: 'cassandra-driver-mapping', version: '3.6.0'
     compile group: 'com.datastax.cassandra', name: 'cassandra-driver-extras', version: '3.6.0'
     compile group: 'org.apache.cassandra', name: 'cassandra-all', version: '3.6'
+    compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.13'
 }
 
 compileKotlin {

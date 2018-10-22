@@ -1,3 +1,10 @@
+//*****************					
+//
+// CASSANDRA TABLES
+//
+//*****************
+
+
 Evenly, Explicit, Uncertain
 
 CREATE TABLE timeseries.e_e_u (
@@ -153,3 +160,83 @@ VALUES ('Human', 'Sample', 11.0, 'G') ;
 APPLY BATCH;
 					
 					
+CREATE TABLE timeseries.temperatures (
+	timeseries_name text,
+	column_name text,
+	time timestamp,
+    value double,
+    primary key(timeseries_name, column_name, time)
+) WITH CLUSTERING ORDER BY (column_name ASC,time ASC) 
+  AND compaction = {'class': 'TimeWindowCompactionStrategy', 
+                    'compaction_window_size': 1, 
+                    'compaction_window_unit': 'DAYS'};
+					
+					
+					
+//*************					
+//
+// MYSQL TABLES
+//
+//*************
+					
+					
+CREATE TABLE timeseries.e_e_num_nts (
+	timeseries_name VARCHAR(256),
+	column_name VARCHAR(256),
+	time DOUBLE,
+    value DOUBLE) ;
+					
+BEGIN BATCH
+INSERT INTO timeseries.e_e_num_nts  (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'humidity', 0.0, 0.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'humidity', 1.0, 10.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'humidity', 2.0, 20.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'humidity', 3.0, 20.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'humidity', 4.0, 30.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'humidity', 5.0, 30.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'humidity', 6.0, 20.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'humidity', 7.0, 20.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'humidity', 8.0, 10.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'humidity', 9.0, 20.0) ;			
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'temperature', 0.0, 0.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'temperature', 1.0, 10.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'temperature', 2.0, 20.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'temperature', 3.0, 20.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'temperature', 4.0, 30.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'temperature', 5.0, 30.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'temperature', 6.0, 20.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'temperature', 7.0, 20.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'temperature', 8.0, 10.0) ;
+INSERT INTO timeseries.e_e_num_nts (timeseries_name, column_name, time, value)
+VALUES ('TimeSeries0', 'temperature', 9.0, 20.0) ;	
+APPLY BATCH ;
+
+
+CREATE TABLE timeseries.e_e_num (
+	timeseries_name VARCHAR(256),
+	column_name VARCHAR(256),
+	time timestamp,
+    value DOUBLE) ;
+
+
+
+
+
