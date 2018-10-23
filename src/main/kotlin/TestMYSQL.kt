@@ -17,8 +17,14 @@ fun main(args: Array<String>) {
     }
     println("Connected to MYSQL")
 
-    conn.select_e_e_num_pts()
-
+//    conn.select_e_e_num_pts()
+//    conn.insert_e_e_num()
+//    conn.select_e_e_num()
+//    conn.select_e_e_sym()
+//    conn.insert_e_e_uncert()
+//    conn.select_e_e_uncert()
+//    conn.insertTemperatureData()
+    conn.select_temperature()
 
     conn.close()
     println("Connection closed")

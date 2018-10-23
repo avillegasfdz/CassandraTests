@@ -238,5 +238,48 @@ CREATE TABLE timeseries.e_e_num (
 
 
 
+CREATE TABLE timeseries.e_e_sym (
+	timeseries_name VARCHAR(256),
+	column_name VARCHAR(256),
+	time DOUBLE,
+    value TEXT) ;
 
 
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 0.0, 'A') ;
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 1.0, 'C') ;
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 2.0, 'T') ;
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 3.0, 'A') ;
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 4.0, 'A') ;
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 5.0, 'G') ;
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 6.0, 'A') ;
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 7.0, 'C') ;
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 8.0, 'T') ;
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 9.0, 'A') ;
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 10.0, 'A') ;
+INSERT INTO timeseries.e_e_sym  (timeseries_name, column_name, time, value)
+VALUES ('Human', 'Sample', 11.0, 'G') ;
+
+
+CREATE TABLE timeseries.e_e_uncert (
+	timeseries_name VARCHAR(256),
+	column_name VARCHAR(256),
+	time timestamp,
+    value Text) ;
+
+
+CREATE TABLE timeseries.temperatures (
+                 	timeseries_name VARCHAR(256),
+                 	column_name VARCHAR(256),
+                 	time VARCHAR(256),
+                    value double) ;
