@@ -190,7 +190,7 @@ class MYSQLConnection() {
         val statement = conn.createStatement()
         val resultSet = statement.executeQuery(query)
 
-        while (resultSet.next())  
+        while (resultSet.next())
         {
 
             val timeString = resultSet.getString("time")

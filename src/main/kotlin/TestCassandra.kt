@@ -1,6 +1,73 @@
 import com.datastax.driver.core.exceptions.InvalidQueryException
 import kotlin.system.exitProcess
 
+//sealed class Types{
+//    class MyInt() : Types()
+//    class MyString() : Types()
+//}
+//
+//data class SequenceSpec<T>(val value : T)
+//
+//class SequenceCollection(){
+//    val col = mutableMapOf<String,Map<SequenceSpec<*>, Types>>()
+//
+//    fun insert(name : String, sequence : SequenceSpec<Int>){
+//        val toStore = mutableMapOf<SequenceSpec<*>, Types>()
+//        toStore[sequence] = Types.MyInt()
+//        col[name] = toStore
+//    }
+//
+//    fun insert(name : String, sequence : SequenceSpec<String>){
+//        val toStore = mutableMapOf<SequenceSpec<*>, Types>()
+//        toStore[sequence] = Types.MyString()
+//        col[name] = toStore
+//    }
+//
+//    fun retrieve(name: String) : SequenceSpec<*>?
+//    {
+//        val stored = col[name]
+//        val seq = stored!!.keys.first()
+//        val type = stored[seq]
+//        when (type)  {
+//            is Types.MyInt -> {
+//                return seq as SequenceSpec<Int>
+//            }
+//            is Types.MyInt -> {
+//                return seq as SequenceSpec<String>
+//            }
+//        }
+//        return null
+//    }
+//}
+//
+//fun isInt(seq : SequenceSpec<Int>): Boolean
+//{
+//    return true
+//}
+//
+//
+//fun main(args: Array<String>) {
+//    val a = SequenceSpec(1)
+//    val b = SequenceSpec("hello")
+//
+//    isInt(a)
+//    isInt(b)
+//
+//    val c = SequenceCollection()
+//    c.insert("int",a)
+//    c.insert("string",b)
+//
+//    val d = c.retrieve("int")
+//    val e = c.retrieve("string")
+//
+//    isInt(d)
+//    isInt(e)
+//
+//
+//    println(a::class.java)
+//    println(b::class.java)
+//}
+
 fun main(args: Array<String>) {
 
     var conn : CassandraConnection
@@ -56,7 +123,7 @@ fun main(args: Array<String>) {
         //conn.insertDataEvenlyExplicitSymbolic()
 //        conn.selectSymbolic("timeseries", "e_e_sym")
 //        conn.insertMilkData()
-        //conn.selectSymbolic()
+        conn.selectSymbolic()
 //        conn.insertTempData()
     }catch (e: InvalidQueryException)
     {
