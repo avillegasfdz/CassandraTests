@@ -1,3 +1,4 @@
+package ArrowVectorsTest
 import com.google.common.collect.ImmutableList
 import org.apache.arrow.memory.RootAllocator
 import org.apache.arrow.vector.*
@@ -55,21 +56,23 @@ sealed class DataType : Serializable {
     data class TimestampValueWithFormat(val simpleDateFormat: SimpleDateFormat) : DataType()
 }
 
-fun rawToVector(root: VectorSchemaRoot, name: String, rawData: List<Any>, type: DataType, size: Int){
+fun rawToVector(vectors : MutableMap<String,FieldVector>, name: String, rawData: List<Any>, type: DataType, size: Int){
 
     when (type) {
         is DataType.NumericalValue -> {
-            val vector = root.getVector(name) as Float8Vector
+            val vector = Float8Vector(name, RootAllocator(Long.MAX_VALUE))
             vector.setInitialCapacity(size)
             vector.allocateNew()
             for (index in 0 until size) {
                 vector.set(index, rawData[index] as Double)
             }
             vector.valueCount = size
+            vectors.put(name,vector)
         }
 
         is DataType.TimestampValue -> {
-            val vector = root.getVector(name) as TimeStampVector
+            val fieldType = FieldType.nullable(ArrowType.Timestamp(TimeUnit.MILLISECOND, null))
+            val vector = TimeStampMilliVector(name, fieldType, RootAllocator(Long.MAX_VALUE))
             vector.setInitialCapacity(size)
             vector.allocateNew()
             for (index in 0 until size) {
@@ -77,23 +80,33 @@ fun rawToVector(root: VectorSchemaRoot, name: String, rawData: List<Any>, type: 
                 vector.set(index, valueToInsert.time)
             }
             vector.valueCount = size
+            vectors.put(name,vector)
         }
 
         //TODO: Implement
         is DataType.UncertainValue -> {
-            val vector = root.getVector(name) as ListVector
+            val vector = ListVector.empty(name,RootAllocator((Long.MAX_VALUE)) )
             vector.setInitialCapacity(size)
             vector.allocateNew()
-//            for (index in 0 until size) {
-//                val valueToInsert = rawData[index] as Timestamp
-//                vector.set(index, valueToInsert.time)
-//            }
+            val writer = vector.writer
+            writer.allocate()
+            for (index in 0 until size) {
+                val valueToInsert = rawData[index] as ArrayList<Double>
+                writer.position = index
+                writer.startList()
+                valueToInsert.forEach(){
+                    writer.float8().writeFloat8(it)
+                }
+                writer.endList()
+            }
+            writer.setValueCount(size)
             vector.valueCount = size
+            vectors.put(name,vector)
         }
 
-        //TODO: Implement
+
         is DataType.SymbolicValue -> {
-            val vector = root.getVector(name) as VarCharVector
+            val vector = VarCharVector(name,RootAllocator((Long.MAX_VALUE)))
             vector.setInitialCapacity(size)
             vector.allocateNew()
             for (index in 0 until size) {
@@ -101,16 +114,17 @@ fun rawToVector(root: VectorSchemaRoot, name: String, rawData: List<Any>, type: 
                 vector.set(index, valueToInsert.toByteArray())
             }
             vector.valueCount = size
+            vectors.put(name,vector)
         }
     }
 }
 
 
-fun vectorToRaw(root: VectorSchemaRoot, name: String, type: DataType) : List<Any>?{
+fun vectorToRaw(vectors : MutableMap<String,FieldVector>, name: String, type: DataType) : List<Any>?{
     when (type) {
         is DataType.NumericalValue -> {
             val rawData = arrayListOf<Double>()
-            val vector = root.getVector(name) as Float8Vector
+            val vector = vectors[name] as Float8Vector
             for (i in 0 until vector.valueCount) {
                 rawData.add(vector.get(i))
             }
@@ -119,7 +133,7 @@ fun vectorToRaw(root: VectorSchemaRoot, name: String, type: DataType) : List<Any
 
         is DataType.TimestampValue -> {
             val rawData = arrayListOf<Timestamp>()
-            val vector = root.getVector(name) as TimeStampVector
+            val vector = vectors[name] as TimeStampVector
             for (i in 0 until vector.valueCount) {
                 rawData.add(Timestamp(vector.get(i)))
             }
@@ -128,18 +142,18 @@ fun vectorToRaw(root: VectorSchemaRoot, name: String, type: DataType) : List<Any
 
         //TODO: Implement
         is DataType.UncertainValue -> {
-            val rawData = arrayListOf<Timestamp>()
-            val vector = root.getVector(name) as TimeStampVector
-//            for (i in 0 until vector.valueCount) {
-//                rawData.add(Timestamp(vector.get(i)))
-//            }
+            val rawData = arrayListOf<ArrayList<Double>>()
+            val vector = vectors[name] as ListVector
+            for (i in 0 until vector.size()) {
+                rawData.add(vector.getObject(i) as ArrayList<Double>)
+            }
             return rawData
         }
 
         //TODO: Implement
         is DataType.SymbolicValue -> {
             val rawData = arrayListOf<String>()
-            val vector = root.getVector(name) as VarCharVector
+            val vector = vectors[name] as VarCharVector
             for (i in 0 until vector.valueCount) {
                 rawData.add(String(vector.get(i)))
             }
@@ -186,37 +200,24 @@ fun main(args: Array<String>) {
     sequenceDTO.put("Uncertain", DataType.UncertainValue)
     sequenceDTO.put("Symbolic", DataType.SymbolicValue)
 
-    //Create Fields
-    val timestampField = Field("Timestamp", FieldType.nullable(ArrowType.Timestamp(TimeUnit.MILLISECOND, TimeZone.getDefault().toString())), null)
-    val numericField = Field("Numeric", FieldType.nullable(ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE)), null)
-//    val uncertainField = Field("Uncertain", FieldType.nullable(ArrowType.List().getType()), null)
-    val symbolicField = Field("Symbolic", FieldType.nullable(ArrowType.Utf8()), null)
+
+    val vectors = mutableMapOf<String,FieldVector>()
 
 
-    //Create schema
-    val builder = ImmutableList.builder<Field>()//mutableListOf<Field>()
-    builder.add(timestampField)
-    builder.add(numericField)
-//    builder.add(uncertainField)
-    builder.add(symbolicField)
-    val schema = Schema(builder.build(), null)
+    rawToVector(vectors, "Timestamp",timestampData, DataType.TimestampValue, NELEM)
+    rawToVector(vectors, "Numeric",numericData, DataType.NumericalValue, NELEM)
+    rawToVector(vectors, "Uncertain",uncertainData, DataType.UncertainValue, NELEM)
+    rawToVector(vectors, "Symbolic",symbolicData, DataType.SymbolicValue, NELEM)
 
 
-    //Store in Arrow schema
-    val root = VectorSchemaRoot.create(schema, RootAllocator(Long.MAX_VALUE))
-
-    rawToVector(root, "Timestamp",timestampData, DataType.TimestampValue, NELEM)
-    rawToVector(root, "Numeric",numericData, DataType.NumericalValue, NELEM)
-//    rawToVector(root, "Uncertain",uncertainData, DataType.UncertainValue, NELEM)
-    rawToVector(root, "Symbolic",symbolicData, DataType.SymbolicValue, NELEM)
-
-
-    val returnedTimestamp = vectorToRaw(root, "Timestamp", DataType.TimestampValue)
-    val returnedNumeric = vectorToRaw(root, "Numeric", DataType.NumericalValue)
-    val returnedSymbolic = vectorToRaw(root, "Symbolic", DataType.SymbolicValue)
+    val returnedTimestamp = vectorToRaw(vectors, "Timestamp", DataType.TimestampValue)
+    val returnedNumeric = vectorToRaw(vectors, "Numeric", DataType.NumericalValue)
+    val returnedSymbolic = vectorToRaw(vectors, "Symbolic", DataType.SymbolicValue)
+    val returnedUncertain = vectorToRaw(vectors, "Uncertain", DataType.UncertainValue)
 
 
     returnedTimestamp?.forEach { println(it) }
     returnedNumeric?.forEach { println(it) }
     returnedSymbolic?.forEach { println(it) }
+    returnedUncertain?.forEach{ println(it) }
 }
