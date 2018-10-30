@@ -64,7 +64,7 @@ fun rawToVector(vectors : MutableMap<String,FieldVector>, name: String, rawData:
             vector.setInitialCapacity(size)
             vector.allocateNew()
             for (index in 0 until size) {
-                vector.set(index, rawData[index] as Double)
+                vector.setSafe(index, rawData[index] as Double)
             }
             vector.valueCount = size
             vectors.put(name,vector)
@@ -77,7 +77,7 @@ fun rawToVector(vectors : MutableMap<String,FieldVector>, name: String, rawData:
             vector.allocateNew()
             for (index in 0 until size) {
                 val valueToInsert = rawData[index] as Timestamp
-                vector.set(index, valueToInsert.time)
+                vector.setSafe(index, valueToInsert.time)
             }
             vector.valueCount = size
             vectors.put(name,vector)
@@ -111,7 +111,8 @@ fun rawToVector(vectors : MutableMap<String,FieldVector>, name: String, rawData:
             vector.allocateNew()
             for (index in 0 until size) {
                 val valueToInsert = rawData[index] as String
-                vector.set(index, valueToInsert.toByteArray())
+                //TODO: This is taken from the Arrow example, but to me it seems unsafe
+                vector.setSafe(index, valueToInsert.toByteArray())
             }
             vector.valueCount = size
             vectors.put(name,vector)
@@ -144,8 +145,8 @@ fun vectorToRaw(vectors : MutableMap<String,FieldVector>, name: String, type: Da
         is DataType.UncertainValue -> {
             val rawData = arrayListOf<ArrayList<Double>>()
             val vector = vectors[name] as ListVector
-            for (i in 0 until vector.size()) {
-                rawData.add(vector.getObject(i) as ArrayList<Double>)
+            for (i in 0 until vector.valueCount) {
+                rawData.add(i, vector.getObject(i) as ArrayList<Double>)
             }
             return rawData
         }
@@ -179,11 +180,11 @@ fun main(args: Array<String>) {
     val symbolicData = arrayListOf("A", "C", "G", "T", "A", "C", "G", "T")
 
     val uncertainData = arrayListOf<ArrayList<Double>>()
-    val uncertainValues = arrayListOf(0.0)
-    for (i in 1..NELEM)
+    val uncertainValues = arrayListOf<Double>()
+    for (i in 0 until NELEM)
     {
-        uncertainData.add(uncertainValues)
-        uncertainValues.add(i.toDouble())
+        uncertainValues.add(i, i.toDouble())
+        uncertainData.add(i, uncertainValues.clone() as ArrayList<Double>)
     }
 
     val timestampData = arrayListOf<Timestamp>()
@@ -200,9 +201,7 @@ fun main(args: Array<String>) {
     sequenceDTO.put("Uncertain", DataType.UncertainValue)
     sequenceDTO.put("Symbolic", DataType.SymbolicValue)
 
-
     val vectors = mutableMapOf<String,FieldVector>()
-
 
     rawToVector(vectors, "Timestamp",timestampData, DataType.TimestampValue, NELEM)
     rawToVector(vectors, "Numeric",numericData, DataType.NumericalValue, NELEM)
@@ -220,4 +219,5 @@ fun main(args: Array<String>) {
     returnedNumeric?.forEach { println(it) }
     returnedSymbolic?.forEach { println(it) }
     returnedUncertain?.forEach{ println(it) }
+
 }
