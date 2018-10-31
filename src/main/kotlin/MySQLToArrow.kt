@@ -1,11 +1,8 @@
 package MySQLToArrow
 
-import org.apache.arrow.vector.FieldVector
 import org.apache.arrow.adapter.jdbc.JdbcToArrow
 import org.apache.arrow.memory.RootAllocator
-import org.apache.arrow.vector.Float8Vector
-import org.apache.arrow.vector.TimeStampVector
-import org.apache.arrow.vector.VarCharVector
+import org.apache.arrow.vector.*
 import org.apache.arrow.vector.complex.ListVector
 
 import java.io.Serializable
@@ -15,6 +12,7 @@ import java.sql.SQLException
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.system.measureTimeMillis
 
 sealed class DataType : Serializable {
     /**
@@ -127,17 +125,52 @@ fun vectorToRaw(vectors : MutableMap<String,FieldVector>, name: String, type: Da
     return null
 }
 
-fun VarCharToListVector(vector : VarCharVector) : ListVector
-{
-    //TODO: Check name
-    val result = ListVector.empty("",RootAllocator((Long.MAX_VALUE)) )
+
+
+//One overload per type
+
+fun NormalizeToNumerical(vector: FieldVector ) : Float8Vector {
+    val result = when (vector){
+        is Float4Vector ->
+            NormalizeToNumerical(vector as Float4Vector)
+        else ->
+            vector
+    }
+    return result as Float8Vector
+}
+
+
+fun NormalizeToNumerical(vector: Float4Vector) : Float8Vector {
+    val result = Float8Vector("", RootAllocator((Long.MAX_VALUE)))
     result.setInitialCapacity(vector.valueCount)
+    result.allocateNew()
+    for (index in 0 until vector.valueCount)
+    {
+        result.setSafe(index, vector.get(index).toDouble())
+
+    }
+    result.valueCount = vector.valueCount
+    return result
+}
+
+fun NormalizeToTimestamp(vector: FieldVector) : TimeStampVector {
+    return vector as TimeStampVector
+}
+
+fun NormalizeToSymbolic(vector: FieldVector) : VarCharVector {
+    return vector as VarCharVector
+}
+
+fun NormalizeToUncertain(vector: FieldVector) : ListVector {
+    val result = ListVector.empty("",RootAllocator((Long.MAX_VALUE)) )
+    val vec = vector as VarCharVector
+    result.setInitialCapacity(vec.valueCount)
     result.allocateNew()
     val writer = result.writer
     writer.allocate()
-    for (i in 0 until vector.valueCount) {
+    for (i in 0 until vec.valueCount) {
         //uncerts contains the string in format "[0.0, 1.0, 2.0]"
-        var uncerts = String(vector.get(i))
+        var uncerts = String(vec.get(i))
         uncerts = uncerts.drop(1)
         uncerts = uncerts.dropLast(1)
         val uncertsAsStringArray = uncerts.split(", ")
@@ -151,11 +184,10 @@ fun VarCharToListVector(vector : VarCharVector) : ListVector
         writer.endList()
 
     }
-    writer.setValueCount(vector.valueCount)
-    result.valueCount = vector.valueCount
+    writer.setValueCount(vec.valueCount)
+    result.valueCount = vec.valueCount
     return result
 }
-
 
 fun main(args: Array<String>) {
 
@@ -178,15 +210,25 @@ fun main(args: Array<String>) {
     val numericVectors = mutableMapOf<String,FieldVector>()
 
 
-    numericQueries.forEach() {
+    numericQueries.forEach {
         val vectorRoot = JdbcToArrow.sqlToArrow(conn, it.value, RootAllocator((Long.MAX_VALUE)))
         val vector = vectorRoot.fieldVectors[0]
-        numericVectors.put(it.key, vector)
+
+        when (numericSequenceDTO.get(it.key)) {
+            is DataType.NumericalValue ->
+                numericVectors.put(it.key, NormalizeToNumerical(vector))
+            is DataType.SymbolicValue ->
+                numericVectors.put(it.key, NormalizeToSymbolic(vector))
+            is DataType.TimestampValue ->
+                numericVectors.put(it.key, NormalizeToTimestamp(vector))
+            is DataType.UncertainValue ->
+                numericVectors.put(it.key, NormalizeToUncertain(vector))
+        }
     }
 
     val numericSequence = Sequence(numericSequenceDTO, numericQueries, numericVectors)
 
-    numericSequence.sequenceDTO.forEach(){
+    numericSequence.sequenceDTO.forEach{
         val values = vectorToRaw(numericSequence.vectors,it.key,it.value)
         println(it.key+": ")
         values!!.forEach { println(it) }
@@ -210,7 +252,16 @@ fun main(args: Array<String>) {
     symbolicQueries.forEach() {
         val vectorRoot = JdbcToArrow.sqlToArrow(conn, it.value, RootAllocator((Long.MAX_VALUE)))
         val vector = vectorRoot.fieldVectors[0]
-        symbolicVectors.put(it.key, vector)
+        when (symbolicSequenceDTO.get(it.key)) {
+            is DataType.NumericalValue ->
+                symbolicVectors.put(it.key, NormalizeToNumerical(vector))
+            is DataType.SymbolicValue ->
+                symbolicVectors.put(it.key, NormalizeToSymbolic(vector))
+            is DataType.TimestampValue ->
+                symbolicVectors.put(it.key, NormalizeToTimestamp(vector))
+            is DataType.UncertainValue ->
+                symbolicVectors.put(it.key, NormalizeToUncertain(vector))
+        }
     }
 
     val symbolicSequence = Sequence(symbolicSequenceDTO,symbolicQueries,symbolicVectors)
@@ -241,11 +292,16 @@ fun main(args: Array<String>) {
     uncertainQueries.forEach() {
         val vectorRoot = JdbcToArrow.sqlToArrow(conn, it.value, RootAllocator((Long.MAX_VALUE)))
         val vector = vectorRoot.fieldVectors[0]
-        if (uncertainSequenceDTO[it.key] is DataType.UncertainValue)
-        {
-            uncertainVectors.put(it.key, VarCharToListVector(vector as VarCharVector))
-        } else {
-            uncertainVectors.put(it.key, vector)
+
+        when (uncertainSequenceDTO.get(it.key)) {
+            is DataType.NumericalValue ->
+                uncertainVectors.put(it.key, NormalizeToNumerical(vector))
+            is DataType.SymbolicValue ->
+                uncertainVectors.put(it.key, NormalizeToSymbolic(vector))
+            is DataType.TimestampValue ->
+                uncertainVectors.put(it.key, NormalizeToTimestamp(vector))
+            is DataType.UncertainValue ->
+                uncertainVectors.put(it.key, NormalizeToUncertain(vector))
         }
     }
 
@@ -256,6 +312,51 @@ fun main(args: Array<String>) {
         println(it.key+": ")
         values!!.forEach { println(it) }
     }
+
+
+    /*
+ *  Numeric Time Series with 2 columns
+ */
+
+    val floatSequenceDTO = mutableMapOf<String, DataType>()
+    floatSequenceDTO.put("Time", DataType.TimestampValue)
+    floatSequenceDTO.put("Temperature", DataType.NumericalValue)
+    floatSequenceDTO.put("Humidity", DataType.NumericalValue)
+
+    val floatQueries = mutableMapOf<String, String>()
+    floatQueries.put("Time", "select distinct time from timeseries.e_e_num_float order by time asc ;")
+    floatQueries.put("Temperature" , "select value from timeseries.e_e_num_float where column_name='temperature' order by column_name asc, time asc ;" )
+    floatQueries.put("Humidity" , "select value from timeseries.e_e_num_float where column_name='humidity' order by column_name asc, time asc ;" )
+
+    val floatVectors = mutableMapOf<String,FieldVector>()
+
+
+    floatQueries.forEach {
+        val vectorRoot = JdbcToArrow.sqlToArrow(conn, it.value, RootAllocator((Long.MAX_VALUE)))
+        val vector = vectorRoot.fieldVectors[0]
+        when (floatSequenceDTO.get(it.key)) {
+            is DataType.NumericalValue ->
+                floatVectors.put(it.key, NormalizeToNumerical(vector))
+            is DataType.SymbolicValue ->
+                floatVectors.put(it.key, NormalizeToSymbolic(vector))
+            is DataType.TimestampValue ->
+                floatVectors.put(it.key, NormalizeToTimestamp(vector))
+            is DataType.UncertainValue ->
+                floatVectors.put(it.key, NormalizeToUncertain(vector))
+        }
+
+
+    }
+
+    val floatSequence = Sequence(floatSequenceDTO, floatQueries, floatVectors)
+
+    floatSequence.sequenceDTO.forEach{
+        val values = vectorToRaw(floatSequence.vectors,it.key,it.value)
+        println(it.key+": ")
+        values!!.forEach { println(it) }
+    }
+
+
 
     conn.close()
 }
