@@ -133,17 +133,25 @@ fun VarCharToListVector(vector : VarCharVector) : ListVector
     val result = ListVector.empty("",RootAllocator((Long.MAX_VALUE)) )
     result.setInitialCapacity(vector.valueCount)
     result.allocateNew()
+    val writer = result.writer
+    writer.allocate()
     for (i in 0 until vector.valueCount) {
-        var uncerts = vector.get(i).toString()
+        //uncerts contains the string in format "[0.0, 1.0, 2.0]"
+        var uncerts = String(vector.get(i))
         uncerts = uncerts.drop(1)
         uncerts = uncerts.dropLast(1)
         val uncertsAsStringArray = uncerts.split(", ")
+        //uncertsAsDoubleArray contains the array of doubles[0.0, 1.0, 2.0]
         val uncertsAsDoubleArray = uncertsAsStringArray.map { it.toDouble() }
-        val writer = result.writer
-        writer.allocate()
-    //TODO
-        writer.setValueCount(size)
+        writer.position = i
+        writer.startList()
+        uncertsAsDoubleArray.forEach{ number ->
+            writer.float8().writeFloat8(number)
+        }
+        writer.endList()
+
     }
+    writer.setValueCount(vector.valueCount)
     result.valueCount = vector.valueCount
     return result
 }
@@ -235,11 +243,10 @@ fun main(args: Array<String>) {
         val vector = vectorRoot.fieldVectors[0]
         if (uncertainSequenceDTO[it.key] is DataType.UncertainValue)
         {
-            uncertainVectors.put(it.key, VarCharToListVector(vector))
+            uncertainVectors.put(it.key, VarCharToListVector(vector as VarCharVector))
         } else {
             uncertainVectors.put(it.key, vector)
         }
-
     }
 
     val uncertainSequence = Sequence(uncertainSequenceDTO,uncertainQueries, uncertainVectors)
