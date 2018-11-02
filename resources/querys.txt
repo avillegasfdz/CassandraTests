@@ -172,6 +172,18 @@ CREATE TABLE timeseries.temperatures (
                     'compaction_window_unit': 'DAYS'};
 					
 					
+CREATE TABLE timeseries.temperatures_str (
+	timeseries_name text,
+	column_name text,
+	time text,
+    value text,
+    primary key(timeseries_name, column_name, time)
+) WITH CLUSTERING ORDER BY (column_name ASC,time ASC) 
+  AND compaction = {'class': 'TimeWindowCompactionStrategy', 
+                    'compaction_window_size': 1, 
+                    'compaction_window_unit': 'DAYS'};
+					
+					
 					
 //*************					
 //

@@ -5,6 +5,7 @@ import org.apache.arrow.memory.RootAllocator
 import org.apache.arrow.vector.*
 import org.apache.arrow.vector.complex.ListVector
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.util.ArrayList
 
 
@@ -110,9 +111,42 @@ fun main(args: Array<String>) {
         values!!.forEach { println(it) }
     }
 
+
+
+    val numFromStringSequenceDTO = mutableMapOf<String, DataType>()
+    numFromStringSequenceDTO.put("Time", DataType.TimestampValueWithFormat(SimpleDateFormat("yyyy-MM-dd")))
+    numFromStringSequenceDTO.put("Temperature", DataType.NumericalValueFromString)
+
+
+    val numFromStringQueries = mutableMapOf<String, String>()
+    numFromStringQueries.put("Time", "select time from timeseries.temperatures_str where timeseries_name='Castle' and column_name='Temperature' order by column_name asc, time asc limit 10;")
+    numFromStringQueries.put("Temperature" , "select value from timeseries.temperatures_str where timeseries_name='Castle' and column_name='Temperature' order by column_name asc, time asc limit 10;")
+
+    val numFromStringVectors = mutableMapOf<String, ValueVector>()
+
+    numFromStringQueries.forEach()
+    {
+        val vector = when (numFromStringSequenceDTO[it.key]) {
+            is DataType.NumericalValue ->  cassandraToArrow(session, it.value, DataType.NumericalValue )
+            is DataType.SymbolicValue  ->  cassandraToArrow(session, it.value, DataType.SymbolicValue )
+            is DataType.TimestampValue ->  cassandraToArrow(session, it.value, DataType.TimestampValue )
+            is DataType.UncertainValue ->  cassandraToArrow(session, it.value, DataType.UncertainValue )
+            is DataType.NumericalValueFromString ->  cassandraToArrow(session, it.value, DataType.NumericalValueFromString )
+            is DataType.TimestampValueWithFormat ->  cassandraToArrow(session, it.value, DataType.TimestampValueWithFormat(SimpleDateFormat("yyyy-MM-dd")) )
+            else -> cassandraToArrow(session, it.value, DataType.NumericalValue )
+        }
+        numFromStringVectors.put(it.key, vector)
+    }
+
+    numFromStringSequenceDTO.forEach{
+        val values = arrowVectorToRaw(numFromStringVectors, it.key, it.value)
+        println(it.key+": ")
+        values!!.forEach { println(it) }
+    }
+
     session.close()
     cluster.close()
-}
+} //////////////////////////////////////MAIN/////////////////////////////////////////
 
 
 fun cassandraToArrow(session: Session, query : String, dataType: DataType.NumericalValue) : Float8Vector
@@ -132,7 +166,6 @@ fun cassandraToArrow(session: Session, query : String, dataType: DataType.Numeri
     return vector
 }
 
-//TODO: Not tested
 fun cassandraToArrow(session: Session, query : String, dataType: DataType.NumericalValueFromString) : Float8Vector
 {
     val resultSet = session.execute(query)
@@ -168,9 +201,7 @@ fun cassandraToArrow(session: Session, query : String, dataType: DataType.Symbol
 fun cassandraToArrow(session: Session, query : String, dataType: DataType.TimestampValue) : TimeStampVector
 {
     val resultSet = session.execute(query)
-    //FIXME: Assumption: Timestamps are stored in milliseconds as default in Cassandra.
     val vector = TimeStampNanoVector("", RootAllocator(Long.MAX_VALUE))
-    //FIXME: What happens with larger queries?
     val resultList = resultSet.toList()
     vector.setInitialCapacity(resultList.size)
     vector.allocateNew()
@@ -188,9 +219,7 @@ fun cassandraToArrow(session: Session, query : String, dataType: DataType.Timest
 fun cassandraToArrow(session: Session, query : String, dataType: DataType.TimestampValueSecondsFromString) : TimeStampVector
 {
     val resultSet = session.execute(query)
-    //FIXME: Assumption: Timestamps are stored in milliseconds as default in Cassandra.
     val vector = TimeStampNanoVector("", RootAllocator(Long.MAX_VALUE))
-    //FIXME: What happens with larger queries?
     val resultList = resultSet.toList()
     vector.setInitialCapacity(resultList.size)
     vector.allocateNew()
@@ -209,9 +238,7 @@ fun cassandraToArrow(session: Session, query : String, dataType: DataType.Timest
 fun cassandraToArrow(session: Session, query : String, dataType: DataType.TimestampValueMillisFromString) : TimeStampVector
 {
     val resultSet = session.execute(query)
-    //FIXME: Assumption: Timestamps are stored in milliseconds as default in Cassandra.
     val vector = TimeStampNanoVector("", RootAllocator(Long.MAX_VALUE))
-    //FIXME: What happens with larger queries?
     val resultList = resultSet.toList()
     vector.setInitialCapacity(resultList.size)
     vector.allocateNew()
@@ -226,13 +253,10 @@ fun cassandraToArrow(session: Session, query : String, dataType: DataType.Timest
 }
 
 
-//TODO: Not tested
 fun cassandraToArrow(session: Session, query : String, dataType: DataType.TimestampValueWithFormat) : TimeStampVector
 {
     val resultSet = session.execute(query)
-    //FIXME: Assumption: Timestamps are stored in milliseconds as default in Cassandra.
     val vector = TimeStampNanoVector("", RootAllocator(Long.MAX_VALUE))
-    //FIXME: What happens with larger queries?
     val resultList = resultSet.toList()
     vector.setInitialCapacity(resultList.size)
     vector.allocateNew()
@@ -285,7 +309,43 @@ fun arrowVectorToRaw(vectors : MutableMap<String,ValueVector>, name: String, typ
             return rawData
         }
 
+        is DataType.NumericalValueFromString -> {
+            val rawData = arrayListOf<Double>()
+            val vector = vectors[name] as Float8Vector
+            for (i in 0 until vector.valueCount) {
+                rawData.add(vector.get(i))
+            }
+            return rawData
+        }
+
         is DataType.TimestampValue -> {
+            val rawData = arrayListOf<Timestamp>()
+            val vector = vectors[name] as TimeStampVector
+            for (i in 0 until vector.valueCount) {
+                rawData.add(Timestamp(vector.get(i)))
+            }
+            return rawData
+        }
+
+        is DataType.TimestampValueWithFormat -> {
+            val rawData = arrayListOf<Timestamp>()
+            val vector = vectors[name] as TimeStampVector
+            for (i in 0 until vector.valueCount) {
+                rawData.add(Timestamp(vector.get(i)))
+            }
+            return rawData
+        }
+
+        is DataType.TimestampValueSecondsFromString -> {
+            val rawData = arrayListOf<Timestamp>()
+            val vector = vectors[name] as TimeStampVector
+            for (i in 0 until vector.valueCount) {
+                rawData.add(Timestamp(vector.get(i)))
+            }
+            return rawData
+        }
+
+        is DataType.TimestampValueMillisFromString -> {
             val rawData = arrayListOf<Timestamp>()
             val vector = vectors[name] as TimeStampVector
             for (i in 0 until vector.valueCount) {

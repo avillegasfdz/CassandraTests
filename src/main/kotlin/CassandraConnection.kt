@@ -238,6 +238,33 @@ class CassandraConnection(node: String, port: Int)
 
     }
 
+    fun insertTempDataAsString()
+    {
+        val prepared = session.prepare("""INSERT INTO timeseries.temperatures_str (timeseries_name, column_name, time, value)
+            |                               VALUES ('Castle', 'Temperature', ?, ?);""".trimMargin())
+
+        var line: String?
+
+        val fileReader = BufferedReader(FileReader("./src/main/resources/mean-monthly-air-temperature-deg-with-days.csv"))
+
+        // Read CSV header
+        fileReader.readLine()
+
+        // Read the file line by line starting from the second line
+        line = fileReader.readLine()
+        while (line != null) {
+            val tokens = line.split(";")
+            if (tokens.size > 0) {
+                val ts = tokens[0].replace("\"","")
+                val v = tokens[1]
+                session.execute(BoundStatement(prepared).bind(ts,v))
+            }
+
+            line = fileReader.readLine()
+        }
+
+    }
+
     fun insertTempData()
     {
         val prepared = session.prepare("""INSERT INTO timeseries.temperatures (timeseries_name, column_name, time, value)
