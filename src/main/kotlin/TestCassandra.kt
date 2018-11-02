@@ -123,7 +123,7 @@ fun main(args: Array<String>) {
         //conn.insertDataEvenlyExplicitSymbolic()
 //        conn.selectSymbolic("timeseries", "e_e_sym")
 //        conn.insertMilkData()
-        conn.selectSymbolic()
+        conn.insertTempData()
 //        conn.insertTempData()
     }catch (e: InvalidQueryException)
     {

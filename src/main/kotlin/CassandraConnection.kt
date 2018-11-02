@@ -245,7 +245,7 @@ class CassandraConnection(node: String, port: Int)
 
         var line: String?
 
-        val fileReader = BufferedReader(FileReader("./resources/mean-monthly-air-temperature-deg.csv"))
+        val fileReader = BufferedReader(FileReader("./src/main/resources/mean-monthly-air-temperature-deg-with-days.csv"))
 
         // Read CSV header
         fileReader.readLine()
@@ -255,7 +255,7 @@ class CassandraConnection(node: String, port: Int)
         while (line != null) {
             val tokens = line.split(";")
             if (tokens.size > 0) {
-                val sdf = SimpleDateFormat("yyyy-MM")
+                val sdf = SimpleDateFormat("yyyy-MM-dd")
                 val date = sdf.parse(tokens[0].replace("\"",""))
                 val ts = Timestamp(date.time)
                 val v = tokens[1].toDouble()

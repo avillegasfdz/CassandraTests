@@ -230,11 +230,11 @@ VALUES ('TimeSeries0', 'temperature', 9.0, 20.0) ;
 APPLY BATCH ;
 
 
-CREATE TABLE timeseries.e_e_num (
+CREATE TABLE timeseries.e_e_num_float (
 	timeseries_name VARCHAR(256),
 	column_name VARCHAR(256),
 	time timestamp,
-    value DOUBLE) ;
+    value FLOAT) ;
 
 
 

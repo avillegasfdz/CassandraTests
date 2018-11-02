@@ -45,7 +45,7 @@ fun main(args: Array<String>) {
     }
 
     numericSequenceDTO.forEach{
-        val values = vectorToRaw(numericVectors, it.key, it.value)
+        val values = arrowVectorToRaw(numericVectors, it.key, it.value)
         println(it.key+": ")
         values!!.forEach { println(it) }
     }
@@ -74,7 +74,7 @@ fun main(args: Array<String>) {
     }
 
     symbolicSequenceDTO.forEach{
-        val values = vectorToRaw(symbolicVectors, it.key, it.value)
+        val values = arrowVectorToRaw(symbolicVectors, it.key, it.value)
         println(it.key+": ")
         values!!.forEach { println(it) }
     }
@@ -105,12 +105,10 @@ fun main(args: Array<String>) {
     }
 
     uncertainSequenceDTO.forEach{
-        val values = vectorToRaw(uncertainVectors, it.key, it.value)
+        val values = arrowVectorToRaw(uncertainVectors, it.key, it.value)
         println(it.key+": ")
         values!!.forEach { println(it) }
     }
-
-
 
     session.close()
     cluster.close()
@@ -121,11 +119,30 @@ fun cassandraToArrow(session: Session, query : String, dataType: DataType.Numeri
 {
     val resultSet = session.execute(query)
     val vector = Float8Vector("", RootAllocator(Long.MAX_VALUE))
-    vector.setInitialCapacity(resultSet.availableWithoutFetching)
+    //resultSet.toList() is required as Cassandra's ResultSet does not store the total size, but the number of rows retrieved (which may not be the same)
+    val resultList = resultSet.toList()
+    vector.setInitialCapacity(resultList.size)
     vector.allocateNew()
     var i = 0
-    resultSet.forEach{
+    resultList.forEach{
         vector.setSafe(i, it.getDouble(0))
+        i+=1
+    }
+    vector.valueCount = i
+    return vector
+}
+
+//TODO: Not tested
+fun cassandraToArrow(session: Session, query : String, dataType: DataType.NumericalValueFromString) : Float8Vector
+{
+    val resultSet = session.execute(query)
+    val vector = Float8Vector("", RootAllocator(Long.MAX_VALUE))
+    val resultList = resultSet.toList()
+    vector.setInitialCapacity(resultList.size)
+    vector.allocateNew()
+    var i = 0
+    resultList.forEach{
+        vector.setSafe(i, it.getString(0).toDouble())
         i+=1
     }
     vector.valueCount = i
@@ -136,10 +153,11 @@ fun cassandraToArrow(session: Session, query : String, dataType: DataType.Symbol
 {
     val resultSet = session.execute(query)
     val vector = VarCharVector("", RootAllocator(Long.MAX_VALUE))
-    vector.setInitialCapacity(resultSet.availableWithoutFetching)
+    val resultList = resultSet.toList()
+    vector.setInitialCapacity(resultList.size)
     vector.allocateNew()
     var i = 0
-    resultSet.forEach{
+    resultList.forEach{
         vector.setSafe(i, it.getString(0).toByteArray())
         i+=1
     }
@@ -150,14 +168,80 @@ fun cassandraToArrow(session: Session, query : String, dataType: DataType.Symbol
 fun cassandraToArrow(session: Session, query : String, dataType: DataType.TimestampValue) : TimeStampVector
 {
     val resultSet = session.execute(query)
-    //FIXME: Assumption: Timestamps are stored in milliseconds
-    val vector = TimeStampMilliVector("", RootAllocator(Long.MAX_VALUE))
+    //FIXME: Assumption: Timestamps are stored in milliseconds as default in Cassandra.
+    val vector = TimeStampNanoVector("", RootAllocator(Long.MAX_VALUE))
     //FIXME: What happens with larger queries?
-    vector.setInitialCapacity(resultSet.availableWithoutFetching)
+    val resultList = resultSet.toList()
+    vector.setInitialCapacity(resultList.size)
     vector.allocateNew()
     var i = 0
-    resultSet.forEach{
+    resultList.forEach{
         vector.setSafe(i, it.getTimestamp(0).time)
+        i += 1
+    }
+    vector.valueCount = i
+    return vector
+}
+
+
+//TODO: Not tested
+fun cassandraToArrow(session: Session, query : String, dataType: DataType.TimestampValueSecondsFromString) : TimeStampVector
+{
+    val resultSet = session.execute(query)
+    //FIXME: Assumption: Timestamps are stored in milliseconds as default in Cassandra.
+    val vector = TimeStampNanoVector("", RootAllocator(Long.MAX_VALUE))
+    //FIXME: What happens with larger queries?
+    val resultList = resultSet.toList()
+    vector.setInitialCapacity(resultList.size)
+    vector.allocateNew()
+    var i = 0
+    resultList.forEach{
+        val dateString = it.getString(0)
+        vector.setSafe(i, dateString.toLong())
+        i += 1
+    }
+    vector.valueCount = i
+    return vector
+}
+
+
+//TODO: Not tested
+fun cassandraToArrow(session: Session, query : String, dataType: DataType.TimestampValueMillisFromString) : TimeStampVector
+{
+    val resultSet = session.execute(query)
+    //FIXME: Assumption: Timestamps are stored in milliseconds as default in Cassandra.
+    val vector = TimeStampNanoVector("", RootAllocator(Long.MAX_VALUE))
+    //FIXME: What happens with larger queries?
+    val resultList = resultSet.toList()
+    vector.setInitialCapacity(resultList.size)
+    vector.allocateNew()
+    var i = 0
+    resultList.forEach{
+        val dateString = it.getString(0)
+        vector.setSafe(i, dateString.toLong())
+        i += 1
+    }
+    vector.valueCount = i
+    return vector
+}
+
+
+//TODO: Not tested
+fun cassandraToArrow(session: Session, query : String, dataType: DataType.TimestampValueWithFormat) : TimeStampVector
+{
+    val resultSet = session.execute(query)
+    //FIXME: Assumption: Timestamps are stored in milliseconds as default in Cassandra.
+    val vector = TimeStampNanoVector("", RootAllocator(Long.MAX_VALUE))
+    //FIXME: What happens with larger queries?
+    val resultList = resultSet.toList()
+    vector.setInitialCapacity(resultList.size)
+    vector.allocateNew()
+    val format = dataType.simpleDateFormat
+    var i = 0
+    resultList.forEach{
+        val dateString = it.getString(0)
+        //FIXME: Throws exception
+        vector.setSafe(i, format.parse(dateString).time)
         i += 1
     }
     vector.valueCount = i
@@ -167,14 +251,14 @@ fun cassandraToArrow(session: Session, query : String, dataType: DataType.Timest
 fun cassandraToArrow(session: Session, query : String, dataType: DataType.UncertainValue) : ListVector
 {
     val resultSet = session.execute(query)
-    //FIXME: Assumption: Timestamps are stored in milliseconds
     val vector = ListVector.empty("", RootAllocator(Long.MAX_VALUE))
-    vector.setInitialCapacity(resultSet.availableWithoutFetching)
+    val resultList = resultSet.toList()
+    vector.setInitialCapacity(resultList.size)
     vector.allocateNew()
     val writer = vector.writer
     writer.allocate()
     var i = 0
-    resultSet.forEach{ row ->
+    resultList.forEach{ row ->
         val list = row.getList(0, java.lang.Double::class.java)
         writer.position = i
         i += 1
@@ -190,7 +274,7 @@ fun cassandraToArrow(session: Session, query : String, dataType: DataType.Uncert
 }
 
 
-fun vectorToRaw(vectors : MutableMap<String,ValueVector>, name: String, type: DataType) : List<Any>?{
+fun arrowVectorToRaw(vectors : MutableMap<String,ValueVector>, name: String, type: DataType) : List<Any>?{
     when (type) {
         is DataType.NumericalValue -> {
             val rawData = arrayListOf<Double>()
@@ -210,7 +294,6 @@ fun vectorToRaw(vectors : MutableMap<String,ValueVector>, name: String, type: Da
             return rawData
         }
 
-        //TODO: Implement
         is DataType.UncertainValue -> {
             val rawData = arrayListOf<ArrayList<Double>>()
             val vector = vectors[name] as ListVector
@@ -220,7 +303,6 @@ fun vectorToRaw(vectors : MutableMap<String,ValueVector>, name: String, type: Da
             return rawData
         }
 
-        //TODO: Implement
         is DataType.SymbolicValue -> {
             val rawData = arrayListOf<String>()
             val vector = vectors[name] as VarCharVector
@@ -229,6 +311,10 @@ fun vectorToRaw(vectors : MutableMap<String,ValueVector>, name: String, type: Da
             }
             return rawData
         }
+
+        //TODO: Complete other DataTypes
+
+
     }
     return null
 }
