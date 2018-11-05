@@ -295,3 +295,5 @@ CREATE TABLE timeseries.temperatures (
                  	column_name VARCHAR(256),
                  	time VARCHAR(256),
                     value double) ;
+					
+select UPDATE_TIME from information_schema.tables where TABLE_SCHEMA='timeseries' and table_name='temperatures' ;
